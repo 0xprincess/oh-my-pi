@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Isolated the `antigravity-cli` ACP workspace directory by default and added `providers.antigravity-cli.isolateWorkspace` (`PI_AGY_ISOLATE_WORKSPACE`) to opt out when debugging native `agy` workspace behavior ([#19328](https://github.com/can1357/oh-my-pi/pull/19328) by [@0xprincess](https://github.com/0xprincess))
+
 ## [18.22.2] - 2026-11-18
 
 ### Added
