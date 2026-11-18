@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Isolated the `antigravity-cli` ACP child working directory in an empty managed workspace by default (`isolateWorkspace` / `antigravityIsolateWorkspace`, env `PI_AGY_ISOLATE_WORKSPACE`), preventing `agy` from indexing large host repositories into memory while host tools continue executing in the real session directory ([#19328](https://github.com/can1357/oh-my-pi/pull/19328) by [@0xprincess](https://github.com/0xprincess))
+
 ## [18.22.2] - 2026-11-18
 
 ### Added
@@ -76,10 +80,6 @@
 ### Added
 
 - Shared `agy acp` processes and IDE MCP bridges across concurrent `antigravity-cli` sessions with matching credentials and tool sets (`shareProcess` / `antigravityShareProcess`, env `PI_AGY_SHARE_PROCESS`), with per-conversation MCP call routing, credential-rotation retirement, and unreferenced idle shutdown ([#19329](https://github.com/can1357/oh-my-pi/pull/19329) by [@0xprincess](https://github.com/0xprincess))
-
-### Changed
-
-- Isolated the `antigravity-cli` ACP child working directory in an empty managed workspace by default (`isolateWorkspace` / `antigravityIsolateWorkspace`, env `PI_AGY_ISOLATE_WORKSPACE`), preventing `agy` from indexing large host repositories into memory while host tools continue executing in the real session directory ([#19328](https://github.com/can1357/oh-my-pi/pull/19328) by [@0xprincess](https://github.com/0xprincess))
 
 ## [18.20.2] - 2026-11-14
 
