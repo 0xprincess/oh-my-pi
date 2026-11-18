@@ -4,7 +4,7 @@
  * prompt before releasing its MCP response; the actual late result is sent
  * only in a subsequent prompt. Failed drains close the transport and reseed.
  */
-import { isRecord, logger, stableStringifyJson } from "@oh-my-pi/pi-utils";
+import { isRecord, logger, prompt, stableStringifyJson } from "@oh-my-pi/pi-utils";
 import {
 	type ContentBlock,
 	type PromptResponse,
@@ -40,9 +40,18 @@ import {
 	spawnAgyCliProcess,
 	withTimeout,
 } from "./process";
-import { inputBlocks, type Ledger, lateToolResultPrompt, planTurn, replayPrompt, transcriptDigest } from "./reconcile";
+import {
+	inputBlocks,
+	type Ledger,
+	lateToolResultPrompt,
+	planTurn,
+	replayPrompt,
+	toolResultImagesPrompt,
+	transcriptDigest,
+} from "./reconcile";
 import { acquireSharedAgyTransport, type SharedAgyPool } from "./shared-pool";
 import type { StepWriter } from "./step-writer";
+import toolResultImageReferenceTemplate from "./tool-result-image-reference.md" with { type: "text" };
 const STARTUP_TIMEOUT_MS = 60_000;
 const ANNOUNCEMENT_TIMEOUT_MS = 2_000;
 // Leave enough time to force-stop a process that never acknowledges cancellation.
@@ -326,9 +335,13 @@ export class AgyHost implements ProviderSessionState {
 					this.#prompt([...lateToolResultPrompt(plan.toolResult), ...plan.input.flatMap(inputBlocks)]);
 				} else {
 					pending?.expiry.cancel();
-					if (plan.input.length > 0) {
+					const steer = [
+						...(plan.toolResult ? toolResultImagesPrompt(plan.toolResult) : []),
+						...plan.input.flatMap(inputBlocks),
+					];
+					if (steer.length > 0) {
 						const previous = this.#turn;
-						this.#prompt(plan.input.flatMap(inputBlocks));
+						this.#prompt(steer);
 						// The old prompt settling proves agy accepted the steer before the held tool resumes.
 						if (previous)
 							await this.#setup(
@@ -875,12 +888,21 @@ function toMcpTool(tool: Tool): McpToolDefinition {
 }
 
 function toMcpOutput(result: ToolResultMessage): McpToolOutput {
+	const content = result.content.flatMap(part =>
+		part.type === "text" ? [{ type: "text" as const, text: part.text }] : [],
+	);
+	if (result.content.some(part => part.type === "image")) {
+		content.push({
+			type: "text",
+			text: prompt.render(toolResultImageReferenceTemplate, {
+				toolCallId: result.toolCallId,
+				toolName: result.toolName,
+				isError: result.isError,
+			}),
+		});
+	}
 	return {
-		content: result.content.map(part =>
-			part.type === "text"
-				? { type: "text", text: part.text }
-				: { type: "image", data: part.data, mimeType: part.mimeType },
-		),
+		content,
 		isError: result.isError,
 	};
 }

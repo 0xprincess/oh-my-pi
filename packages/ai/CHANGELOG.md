@@ -9,6 +9,9 @@
 ### Changed
 
 - Isolated the `antigravity-cli` ACP child working directory in an empty managed workspace by default (`isolateWorkspace` / `antigravityIsolateWorkspace`, env `PI_AGY_ISOLATE_WORKSPACE`), preventing `agy` from indexing large host repositories into memory while host tools continue executing in the real session directory ([#19328](https://github.com/can1357/oh-my-pi/pull/19328) by [@0xprincess](https://github.com/0xprincess))
+### Fixed
+
+- Fixed `antigravity-cli` models not seeing images returned by tools such as `read` on image files ([#19358](https://github.com/can1357/oh-my-pi/pull/19358) by [@0xprincess](https://github.com/0xprincess))
 
 ## [18.22.2] - 2026-11-18
 
