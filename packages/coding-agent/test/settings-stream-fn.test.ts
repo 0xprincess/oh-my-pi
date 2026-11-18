@@ -13,7 +13,9 @@ import { type Context, type Model, type SimpleStreamOptions, streamSimple } from
 import { configureProviderStoreResponses } from "@oh-my-pi/pi-ai/providers/openai-responses-state";
 import {
 	configureAntigravityCliIsolateWorkspace,
+	configureAntigravityCliShareProcess,
 	resolveAntigravityCliIsolateWorkspace,
+	resolveAntigravityCliShareProcess,
 } from "@oh-my-pi/pi-ai/providers/antigravity-cli-state";
 import type { FetchImpl } from "@oh-my-pi/pi-ai/types";
 import { getBundledModel } from "@oh-my-pi/pi-catalog/models";
@@ -22,6 +24,7 @@ import { bindEffects } from "@oh-my-pi/pi-coding-agent/config/registry";
 import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
 import {
 	cfgProvidersAntigravityCliIsolateWorkspace,
+	cfgProvidersAntigravityCliShareProcess,
 	cfgProvidersMuseCodeStoreResponses,
 } from "@oh-my-pi/pi-coding-agent/session/settings";
 import {
@@ -673,6 +676,62 @@ describe("createSettingsAwareStreamFn", () => {
 			} finally {
 				if (previous === undefined) delete process.env.PI_AGY_ISOLATE_WORKSPACE;
 				else process.env.PI_AGY_ISOLATE_WORKSPACE = previous;
+			}
+		});
+	});
+
+	describe("providers.antigravity-cli.shareProcess", () => {
+		const agyModel = { api: "antigravity-acp", provider: "antigravity-cli", id: "gemini-4-carbon" } as Model;
+
+		it("forwards per-session process sharing to antigravity-cli requests and omits it elsewhere", () => {
+			const previous = process.env.PI_AGY_SHARE_PROCESS;
+			delete process.env.PI_AGY_SHARE_PROCESS;
+			try {
+				const defaultBase = captureBase();
+				createSettingsAwareStreamFn(Settings.isolated(), defaultBase.fn)(agyModel, stubContext);
+				expect(defaultBase.calls[0]!.options?.antigravityShareProcess).toBe(true);
+
+				const optedOut = Settings.isolated({ "providers.antigravity-cli.shareProcess": false });
+				const other = Settings.isolated();
+				const releaseOther = bindEffects(other);
+				try {
+					const releaseOptedOut = bindEffects(optedOut);
+					try {
+						expect(resolveAntigravityCliShareProcess()).toBe(false);
+					} finally {
+						releaseOptedOut();
+					}
+					expect(resolveAntigravityCliShareProcess()).toBe(true);
+
+					const optedOutBase = captureBase();
+					createSettingsAwareStreamFn(optedOut, optedOutBase.fn)(agyModel, stubContext);
+					expect(optedOutBase.calls[0]!.options?.antigravityShareProcess).toBe(false);
+
+					const nonAgyBase = captureBase();
+					createSettingsAwareStreamFn(other, nonAgyBase.fn)(stubResponsesModel, stubContext);
+					expect(nonAgyBase.calls[0]!.options?.antigravityShareProcess).toBeUndefined();
+				} finally {
+					releaseOther();
+					configureAntigravityCliShareProcess(undefined);
+				}
+			} finally {
+				if (previous === undefined) delete process.env.PI_AGY_SHARE_PROCESS;
+				else process.env.PI_AGY_SHARE_PROCESS = previous;
+			}
+		});
+
+		it("honors PI_AGY_SHARE_PROCESS over persisted settings", () => {
+			const settings = Settings.isolated();
+			cfgProvidersAntigravityCliShareProcess.set(settings, true);
+			const previous = process.env.PI_AGY_SHARE_PROCESS;
+			process.env.PI_AGY_SHARE_PROCESS = "0";
+			try {
+				const base = captureBase();
+				createSettingsAwareStreamFn(settings, base.fn)(agyModel, stubContext);
+				expect(base.calls[0]!.options?.antigravityShareProcess).toBe(false);
+			} finally {
+				if (previous === undefined) delete process.env.PI_AGY_SHARE_PROCESS;
+				else process.env.PI_AGY_SHARE_PROCESS = previous;
 			}
 		});
 	});
